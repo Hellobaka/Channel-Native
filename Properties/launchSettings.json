@@ -2,7 +2,8 @@
   "profiles": {
     "Channel-Native": {
       "commandName": "Project",
-      "commandLineArgs": "-role 1 -ws ws://127.0.0.1:6254/channel-native -pid 15424 -name me.cqp.luohuaming.TXChat.dll"
+      "commandLineArgs": "-role 1 -ws ws://127.0.0.1:6254/channel-native -pid 15424 -name me.cqp.luohuaming.TXChat.dll",
+      "nativeDebugging": true
     }
   }
 }

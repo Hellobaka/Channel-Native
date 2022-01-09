@@ -1,5 +1,6 @@
 ﻿using Channel_Native.Enums;
 using Channel_Native.Model;
+using Channel_Native.WebSocketCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -11,6 +12,7 @@ using System.Text;
 
 namespace Channel_Native.FakeCQP
 {
+#if false
     public class CQP
     {
         static List<AppInfo> appInfos = new List<AppInfo>();
@@ -22,81 +24,57 @@ namespace Channel_Native.FakeCQP
             Stopwatch sw = new ();
             sw.Start();
             string text = msg.ToString(GB18030);
-            JObject data;
-            List<CQCode> cqCodeList = CQCode.Parse(text);
-
-            CQCodeHelper.Progeress(cqCodeList, ref data, ref text);
-            string pluginname = appInfos.Find(x => x.AuthCode == authcode).Name;
-            int logid = LogHelper.WriteLog(LogLevel.InfoSend, pluginname, "[↑]发送消息", $"群号:{groupid} 消息:{msg.ToString(GB18030)}", "处理中...");
-            WebAPI.SendRequest(url, data.ToString());
+            string resultText = "", image = "";
+            foreach(var item in CQCode.Parse(text))
+            {
+                switch (item.Function)
+                {
+                    case CQFunction.Face:
+                        break;
+                    case CQFunction.Image:
+                        resultText = resultText.Replace(item.ToString(), "");
+                        image = item.Items[""];
+                        break;
+                    case CQFunction.Record:
+                        break;
+                    case CQFunction.At:
+                        resultText = resultText.Replace(item.ToString(), $"<@!{item.Items["qq"]}>");
+                        break;
+                    default:
+                        break;
+                }
+            }
+            Client.Instance.Emit(PluginMessageType.SendMsg, new { text = resultText, image, groupid });
             sw.Stop();
-            LogHelper.UpdateLogStatus(logid, $"√ {sw.ElapsedMilliseconds / (double)1000:f2} s");
-            return Save.MsgList.Count + 1;
+            return 1;
         }
 
         [DllExport(ExportName = "CQ_sendPrivateMsg", CallingConvention = CallingConvention.StdCall)]
         public static int CQ_sendPrivateMsg(int authCode, long qqId, IntPtr msg)
         {
-            Stopwatch sw = new Stopwatch();
+            Stopwatch sw = new ();
             sw.Start();
             string text = msg.ToString(GB18030);
-            string url = $@"{Save.url}v1/LuaApiCaller?qq={Save.curentQQ}&funcname=SendMsg";
-            JObject data;
-            List<CQCode> cqCodeList = CQCode.Parse(text);
-            if (text.Contains("[CQ:image"))
+            string resultText = "", image = "";
+            foreach (var item in CQCode.Parse(text))
             {
-                data = new JObject
+                switch (item.Function)
                 {
-                    {"toUser",qqId},
-                    {"sendToType",1},
-                    {"groupid",0},
-                    {"fileMd5","" },
-                    {"atUser",0 }
-                };
+                    case CQFunction.Face:
+                        break;
+                    case CQFunction.Image:
+                        resultText = resultText.Replace(item.ToString(), "");
+                        image = item.Items[""];
+                        break;
+                    case CQFunction.Record:
+                        break;
+                    default:
+                        break;
+                }
             }
-            else
-            {
-                url += "V2";
-                data = new JObject
-                {
-                    {"ToUserUid",qqId},
-                    {"SendToType",1},
-                    {"GroupID",0 }
-                };
-            }
-            switch (Helper.GetMsgType(qqId))
-            {
-                case -1:
-                    LogHelper.WriteLog(LogLevel.Warning, "消息无法投递", $"此账号未与 {qqId} 建立任何关系");
-                    return 0;
-                case 1:
-                    break;
-                case 3:
-                    if (data.ContainsKey("sendToType"))
-                    {
-                        data["sendToType"] = 3;
-                        data["groupid"] = Helper.GetIDFirstInGroup(qqId);
-                    }
-                    else
-                    {
-                        data["SendToType"] = 3;
-                        data["GroupID"] = Helper.GetIDFirstInGroup(qqId);
-                    }
-                    break;
-                default:
-                    break;
-            }
-            CQCodeHelper.Progeress(cqCodeList, ref data, ref text);
-            string pluginname = appInfos.Find(x => x.AuthCode == authCode).Name;
-            if (WebAPI.SendRequest(url, data.ToString()).Contains("-103"))
-            {
-                LogHelper.WriteLog(LogLevel.Warning, "消息投递失败", "此群禁止临时会话");
-                return 0;
-            }
-            int logid = LogHelper.WriteLog(LogLevel.InfoSend, pluginname, "[↑]发送好友消息", $"QQ:{qqId} 消息:{msg.ToString(GB18030)}", "处理中...");
+            Client.Instance.Emit(PluginMessageType.SendMsg, new { text = resultText, image, qqId });
             sw.Stop();
-            LogHelper.UpdateLogStatus(logid, $"√ {sw.ElapsedMilliseconds / (double)1000:f2} s");
-            return 0;
+            return 1;
         }
 
         [DllExport(ExportName = "CQ_deleteMsg", CallingConvention = CallingConvention.StdCall)]
@@ -186,9 +164,10 @@ namespace Channel_Native.FakeCQP
         public static int CQ_setFatal(int authCode, IntPtr errorMsg)
         {
             string pluginname = appInfos.Find(x => x.AuthCode == authCode).Name;
-            LogHelper.WriteLog(LogLevel.Fatal, pluginname, "异常抛出", errorMsg.ToString(GB18030), "");
-            //待找到实现方法
-            throw new Exception(errorMsg.ToString(GB18030));
+            string msg = errorMsg.ToString(GB18030);
+            LogHelper.WriteLog(LogLevel.Fatal, pluginname, "异常抛出", msg, "");
+            Client.Instance.Emit(PluginMessageType.Error, msg);
+            return 0;
         }
 
         [DllExport(ExportName = "CQ_getGroupMemberInfoV2", CallingConvention = CallingConvention.StdCall)]
@@ -220,13 +199,29 @@ namespace Channel_Native.FakeCQP
         [DllExport(ExportName = "cq_start", CallingConvention = CallingConvention.StdCall)]
         public static bool cq_start(IntPtr msg, int authcode)
         {
-            string json = msg.ToString(GB18030);
-            appInfos.Add(JsonConvert.DeserializeObject<AppInfo>(json));
-            return true;
+            try
+            {
+                JObject json = JObject.Parse(msg.ToString(GB18030));
+
+                appInfos.Add(JsonConvert.DeserializeObject<AppInfo>(json["appinfo"].ToString()));
+                if (Client.Instance == null)
+                {
+                    MainSave.Role = Role.FakeCQP;
+                    Client client = new(json["wsurl"].ToString());
+                    client.Connect();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText("e.txt", ex.Message);
+                return false;
+            }
         }
         public static string SendRequest(string url, string data)
         {
             return "";
         }
     }
+#endif
 }

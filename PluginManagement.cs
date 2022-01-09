@@ -68,7 +68,8 @@ namespace Channel_Native
             InstancePlugin = new Plugin(iLib, appInfo, json.ToString(), dll, enabled);
 
             LogHelper.WriteLog(LogLevel.InfoSuccess, "插件载入", $"插件 {appInfo.Name} 加载成功");
-            cq_start(Marshal.StringToHGlobalAnsi(destpath), authcode);
+            var r = new { appinfo = JsonConvert.SerializeObject(appInfo), wsurl = MainSave.ServerURL }.ToJson();
+            cq_start(Marshal.StringToHGlobalAnsi(r), authcode);
             //将它的窗口写入托盘右键菜单
             //TODO: fix windows
             //NotifyIconHelper.LoadMenu(json);

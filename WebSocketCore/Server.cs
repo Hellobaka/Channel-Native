@@ -1,5 +1,7 @@
 ﻿using Channel_Native.Enums;
 using Channel_Native.Model;
+using Channel_SDK;
+using Channel_SDK.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
@@ -19,6 +21,7 @@ namespace Channel_Native.WebSocketCore
         public WebSocketServer InstanceServer { get; set; }
         private ushort port;
         public static List<MsgHandler> Clients;
+        public static MsgHandler CQPDll { get; set; }
         public Server(ushort Port)
         {
             Instance = this;
@@ -30,7 +33,7 @@ namespace Channel_Native.WebSocketCore
         }
         private static Dictionary<int, MessageStateMachine> OrderedMessage = new();
         private static int msgSeq = 0;
-        public static void Broadcast(PluginMessageType type, object msg)
+        public static void Broadcast(PluginMessageType type, Message msg)
         {
             msgSeq++;
             MessageStateMachine stateMachine = new(type, msg, Clients);
@@ -48,9 +51,10 @@ namespace Channel_Native.WebSocketCore
             public int index = 0;
 
             readonly List<MsgHandler> clients;
-            readonly PluginMessageType type;
-            readonly object msg;
-            public MessageStateMachine(PluginMessageType type, object msg, List<MsgHandler> clients)
+            public readonly PluginMessageType type;
+            public readonly Message msg;
+
+            public MessageStateMachine(PluginMessageType type, Message msg, List<MsgHandler> clients)
             {
                 this.clients = clients;
                 this.type = type;
@@ -130,8 +134,15 @@ namespace Channel_Native.WebSocketCore
                 {
                     case PluginMessageType.PluginInfo:
                         PluginInfo = JsonConvert.DeserializeObject<AppInfo>(json["data"]["msg"].ToString());
+                        if(PluginInfo.Id == "FakeCQP")
+                        {
+                            CQPDll = this;
+                        }
+                        else
+                        {
+                            Emit(PluginMessageType.Enable, "");
+                        }
                         //Helper.OutLog($"获取插件信息: id: {clientID} {PluginInfo.Id}[{PluginInfo.Name}] {PluginInfo.Version} - {PluginInfo.Author}");
-                        Emit(PluginMessageType.Enable, "");
                         break;
                     case PluginMessageType.Error:
                         Helper.OutError($"{PluginInfo.Name} 发生错误: {json["data"]["msg"]}");
@@ -152,6 +163,11 @@ namespace Channel_Native.WebSocketCore
                             Loaded = false;
                             Helper.OutLog($"{PluginInfo.Name} 卸载成功");
                         }
+                        break;
+                    case PluginMessageType.SendMsg:
+                        var sendMsg = json["data"]["msg"];
+                        var lastMsg = OrderedMessage.Last().Value.msg;
+                        Channel.Send_PlainMessage(lastMsg.channel_id, lastMsg.id, sendMsg["text"].ToString(), sendMsg["image"].ToString());
                         break;
                     default:
                         break;

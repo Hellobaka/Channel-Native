@@ -13,6 +13,7 @@ namespace Channel_Native
     {
         static void Main(string[] args)
         {
+            Console.ReadLine();
             _ = new PluginManagment();
 
             HandleStartArgs(args);

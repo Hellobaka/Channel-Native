@@ -12,7 +12,7 @@ namespace Channel_Native.Model
 		/// <summary>
 		/// 获取当前应用的 AppID
 		/// </summary>
-		public string Id { get; private set; }
+		public string Id { get; set; }
 
 		/// <summary>
 		/// 获取当前应用的返回码
@@ -53,9 +53,13 @@ namespace Channel_Native.Model
 		/// 获取当前应用的验证码
 		/// </summary>
 		public int AuthCode { get; private set; }
-		#endregion
+        #endregion
 
-		#region --构造函数--
+        #region --构造函数--
+        public AppInfo()
+        {
+
+        }
 		/// <summary>
 		/// 初始化 <see cref="AppInfo"/> 类的新实例
 		/// </summary>

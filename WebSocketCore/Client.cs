@@ -1,4 +1,5 @@
 ﻿using Channel_Native.Enums;
+using Channel_Native.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -74,15 +75,21 @@ namespace Channel_Native.WebSocketCore
             switch ((PluginMessageType)(int)json["type"])
             {
                 case PluginMessageType.PluginInfo:
-                    MainSave.PluginID = (int)json["data"]["id"];
-                    Emit(PluginMessageType.PluginInfo, PluginManagment.Instance?.InstancePlugin.appinfo);
+                    if(MainSave.Role == Role.Plugin)
+                    {
+                        MainSave.PluginID = (int)json["data"]["id"];
+                        Emit(PluginMessageType.PluginInfo, PluginManagment.Instance?.InstancePlugin.appinfo);
+                    }
+                    else
+                    {
+                        Emit(PluginMessageType.PluginInfo, new AppInfo() { Id ="FakeCQP" });
+                    }
                     break;
                 case PluginMessageType.Diconnect:
                     Environment.Exit(1);
                     break;
                 case PluginMessageType.Error:
-                    break;
-                case PluginMessageType.FinMessage:
+                    
                     break;
                 case PluginMessageType.Enable:
                     PluginManagment.Instance.CallFunction(FunctionName.Enable);
@@ -93,6 +100,8 @@ namespace Channel_Native.WebSocketCore
                     PluginManagment.Instance.CallFunction(FunctionName.Disable);
                     PluginManagment.Instance.CallFunction(FunctionName.Exit);
                     Emit(PluginMessageType.Disable, 1);
+                    break;
+                case PluginMessageType.SendMsg:
                     break;
                 default:
                     break;

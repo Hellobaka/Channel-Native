@@ -2,6 +2,7 @@
 {
     public enum PluginMessageType
     {
+        SendMsg,
         PluginInfo,
         HeartBeat,
         Diconnect,

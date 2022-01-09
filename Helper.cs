@@ -83,5 +83,25 @@ namespace Channel_Native
 			}
 			return builder.ToString();
 		}
+		/// <summary>
+		/// 获取字符串副本的非转义形式
+		/// </summary>
+		/// <param name="source">欲反转义的原始字符串</param>
+		/// <exception cref="ArgumentNullException">参数: source 为 null</exception>
+		/// <returns>返回反转义的字符串副本</returns>
+		public static string CQDeCode(string source)
+		{
+			if (source == null)
+			{
+				throw new ArgumentNullException("source");
+			}
+			StringBuilder builder = new StringBuilder(source);
+			builder = builder.Replace("&#91;", "[");
+			builder = builder.Replace("&#93;", "]");
+			builder = builder.Replace("&#44;", ",");
+			builder = builder.Replace("&amp;", "&");
+			return builder.ToString();
+		}
+
 	}
 }
