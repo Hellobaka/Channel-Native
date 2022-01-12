@@ -70,6 +70,9 @@ namespace Channel_Native
             LogHelper.WriteLog(LogLevel.InfoSuccess, "插件载入", $"插件 {appInfo.Name} 加载成功");
             var r = new { appinfo = JsonConvert.SerializeObject(appInfo), wsurl = MainSave.ServerURL }.ToJson();
             cq_start(Marshal.StringToHGlobalAnsi(r), authcode);
+            PluginManagment.Instance.CallFunction(FunctionName.Enable);
+            PluginManagment.Instance.CallFunction(FunctionName.StartUp);
+
             //将它的窗口写入托盘右键菜单
             //TODO: fix windows
             //NotifyIconHelper.LoadMenu(json);
@@ -116,6 +119,8 @@ namespace Channel_Native
         private static extern bool cq_start(IntPtr path, int authcode);
         [DllImport("CQP.dll", EntryPoint = "CQ_addLog")]
         private static extern int CQ_addLog(int authCode, int priority, IntPtr type, IntPtr msg);
+        [DllImport("CQP.dll", EntryPoint = "init")]
+        private static extern int init(int a, int b);
         /// <summary>
         /// 核心方法调用，将前端处理的数据传递给插件对应事件处理，尝试捕获非托管插件的异常
         /// </summary>

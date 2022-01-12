@@ -17,42 +17,42 @@ namespace Channel_Native.Model
 		/// <summary>
 		/// 获取当前应用的返回码
 		/// </summary>
-		public int ResultCode { get; private set; }
+		public int ResultCode { get;  set; }
 
 		/// <summary>
 		/// 获取当前应用的 Api 版本
 		/// </summary>
-		public int ApiVersion { get; private set; }
+		public int ApiVersion { get;  set; }
 
 		/// <summary>
 		/// 获取当前应用的名称
 		/// </summary>
-		public string Name { get; private set; }
+		public string Name { get;  set; }
 
 		/// <summary>
 		/// 获取当前应用的版本号
 		/// </summary>
-		public string Version { get; private set; }
+		public string Version { get;  set; }
 
 		/// <summary>
 		/// 获取当前应用的顺序版本
 		/// </summary>
-		public int VersionId { get; private set; }
+		public int VersionId { get;  set; }
 
 		/// <summary>
 		/// 获取当前应用的作者名
 		/// </summary>
-		public string Author { get; private set; }
+		public string Author { get;  set; }
 
 		/// <summary>
 		/// 获取当前应用的说明文本
 		/// </summary>
-		public string Description { get; private set; }
+		public string Description { get;  set; }
 
 		/// <summary>
 		/// 获取当前应用的验证码
 		/// </summary>
-		public int AuthCode { get; private set; }
+		public int AuthCode { get;  set; }
         #endregion
 
         #region --构造函数--

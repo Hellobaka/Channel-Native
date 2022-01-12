@@ -13,7 +13,7 @@ namespace Channel_Native
     {
         static void Main(string[] args)
         {
-            Console.ReadLine();
+            // Console.ReadLine();
             _ = new PluginManagment();
 
             HandleStartArgs(args);
@@ -89,7 +89,14 @@ namespace Channel_Native
             int selfPID = Environment.ProcessId;
             foreach (var item in directoryInfo.GetFiles().Where(x => x.Extension == ".dll"))
             {
-                Process.Start(Process.GetCurrentProcess().MainModule.FileName, $"-role {(int)Role.Plugin} -ws {serverURL} -pid {selfPID} -name {item.Name}");
+                ProcessStartInfo ps = new(Process.GetCurrentProcess().MainModule.FileName)
+                {
+                    UseShellExecute = true,
+                    CreateNoWindow = false,
+                    WindowStyle = ProcessWindowStyle.Normal,
+                    Arguments = $"-role { (int)Role.Plugin } -ws { serverURL } -pid { selfPID } -name { item.Name }"
+                };
+                Process.Start(ps);
             }
             Helper.OutLog("等待插件端连接...");
         }

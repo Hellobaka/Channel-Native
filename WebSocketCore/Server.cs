@@ -20,8 +20,8 @@ namespace Channel_Native.WebSocketCore
         public static Server Instance { get; private set; }
         public WebSocketServer InstanceServer { get; set; }
         private ushort port;
-        public static List<MsgHandler> Clients;
-        public static MsgHandler CQPDll { get; set; }
+        public static List<MsgHandler> Clients { get; set; }
+        public static List<MsgHandler> CQPDll { get; set; }
         public Server(ushort Port)
         {
             Instance = this;
@@ -29,6 +29,7 @@ namespace Channel_Native.WebSocketCore
             InstanceServer = new(port);
             InstanceServer.AddWebSocketService<MsgHandler>("/channel-native");
             Clients = new List<MsgHandler>();
+            CQPDll = new List<MsgHandler>();
             InstanceServer.Start();
         }
         private static Dictionary<int, MessageStateMachine> OrderedMessage = new();
@@ -102,21 +103,31 @@ namespace Channel_Native.WebSocketCore
             public int clientID = 0;
             public AppInfo PluginInfo { get; set; }
             public bool Loaded { get; set; } = false;
+            public bool IsPlugin { get; set; } = true;
             protected override void OnMessage(MessageEventArgs e)
             {
                 HandleMessage(this, e.Data);
             }
+            private object PluginLock = new();
             protected override void OnOpen()
             {
-                if (Clients.Count > 1) this.clientID = Clients.Last().clientID + 1;
-                Clients.Add(this);
-                Emit(PluginMessageType.PluginInfo, new { id = clientID });
-                Helper.OutLog($"插件已连接, 数量: {Clients.Count}");
+                lock (PluginLock)
+                {
+                    if (Clients.Count > 1) this.clientID = Clients.Last().clientID + 1;
+                    Emit(PluginMessageType.PluginInfo, new { id = clientID });
+                }
             }
             protected override void OnClose(CloseEventArgs e)
             {
-                Clients.Remove(this);
-                Helper.OutLog($"插件断开连接, 数量: {Clients.Count}");
+                if(IsPlugin)
+                {
+                    Clients.Remove(this);
+                    Helper.OutLog($"插件断开连接, 数量: {Clients.Count}");
+                }
+                else {
+                    CQPDll.Remove(this);
+                    Helper.OutLog($"CQP断开连接, 数量: {CQPDll.Count}");
+                }
             }
             protected override void OnError(ErrorEventArgs e)
             {
@@ -129,20 +140,26 @@ namespace Channel_Native.WebSocketCore
             public void HandleMessage(MsgHandler socket, string Data)
             {
                 JObject json = JObject.Parse(Data);
-                int msgSeq = ((int)json["seq"]);
+                if (json.ContainsKey("seq"))
+                { int msgSeq = (int)json["seq"]; }
                 switch ((PluginMessageType)(int)json["type"])
                 {
                     case PluginMessageType.PluginInfo:
                         PluginInfo = JsonConvert.DeserializeObject<AppInfo>(json["data"]["msg"].ToString());
                         if(PluginInfo.Id == "FakeCQP")
                         {
-                            CQPDll = this;
+                            IsPlugin = false;
+                            CQPDll.Add(this);
+                            Helper.OutLog($"CQP已连接, 数量: {CQPDll.Count}");
                         }
                         else
                         {
+                            IsPlugin = true;
                             Emit(PluginMessageType.Enable, "");
+                            Clients.Add(this);
+                            Helper.OutLog($"插件已连接, 数量: {Clients.Count}");
+                            Helper.OutLog($"获取插件信息: id: {clientID} {PluginInfo.Id}[{PluginInfo.Name}] {PluginInfo.Version} - {PluginInfo.Author}");
                         }
-                        //Helper.OutLog($"获取插件信息: id: {clientID} {PluginInfo.Id}[{PluginInfo.Name}] {PluginInfo.Version} - {PluginInfo.Author}");
                         break;
                     case PluginMessageType.Error:
                         Helper.OutError($"{PluginInfo.Name} 发生错误: {json["data"]["msg"]}");
