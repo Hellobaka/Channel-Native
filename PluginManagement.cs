@@ -70,8 +70,6 @@ namespace Channel_Native
             LogHelper.WriteLog(LogLevel.InfoSuccess, "插件载入", $"插件 {appInfo.Name} 加载成功");
             var r = new { appinfo = JsonConvert.SerializeObject(appInfo), wsurl = MainSave.ServerURL }.ToJson();
             cq_start(Marshal.StringToHGlobalAnsi(r), authcode);
-            PluginManagment.Instance.CallFunction(FunctionName.Enable);
-            PluginManagment.Instance.CallFunction(FunctionName.StartUp);
 
             //将它的窗口写入托盘右键菜单
             //TODO: fix windows

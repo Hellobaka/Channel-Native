@@ -11,6 +11,8 @@ namespace Channel_Native
         public static string PluginName { get; set; }
         public static int ServerPID { get; set; }
 
+        public static ushort ServerPort { get; set; }
+
         public static int PluginID { get; set; }
         public static long CurentQQ { get; set; }
         public static int BoardCastPort { get; set; }

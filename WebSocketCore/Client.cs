@@ -1,8 +1,14 @@
 ﻿using Channel_Native.Enums;
 using Channel_Native.Model;
+using Channel_SDK.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using WebSocket4Net;
 
@@ -16,9 +22,10 @@ namespace Channel_Native.WebSocketCore
         public static Client Instance { get; private set; }
         private string WebSocketURL { get; set; } = "";
         public WebSocket Websocket { get; set; }
-        private bool Connected { get; set; } = false;
+        public static bool Connected { get; set; } = false;
         private bool HeartBeatStop { get; set; } = false;
 
+        private static Dictionary<int, Message> MessageStore = new();
         public Client(string url)
         {
             WebSocketURL = url;
@@ -39,6 +46,7 @@ namespace Channel_Native.WebSocketCore
         }
         private void Websocket_Opened(object sender, EventArgs e)
         {
+            Connected = true;
             Helper.OutLog("服务端连接成功");
             new Thread(() =>
             {
@@ -68,6 +76,7 @@ namespace Channel_Native.WebSocketCore
             WebSocketInit();
             Connect();
         }
+        static Encoding GB18030 = Encoding.GetEncoding("GB18030");
         private void Websocket_MessageReceived(object sender, MessageReceivedEventArgs e)
         {
             Helper.OutLog($"来自服务器的消息:{e.Message}");
@@ -88,9 +97,6 @@ namespace Channel_Native.WebSocketCore
                 case PluginMessageType.Diconnect:
                     Environment.Exit(1);
                     break;
-                case PluginMessageType.Error:
-                    
-                    break;
                 case PluginMessageType.Enable:
                     PluginManagment.Instance.CallFunction(FunctionName.Enable);
                     PluginManagment.Instance.CallFunction(FunctionName.StartUp);
@@ -101,7 +107,44 @@ namespace Channel_Native.WebSocketCore
                     PluginManagment.Instance.CallFunction(FunctionName.Exit);
                     Emit(PluginMessageType.Disable, 1);
                     break;
-                case PluginMessageType.SendMsg:
+                case PluginMessageType.ReceiveMessage:
+                    int msgSeq = (int)json["seq"];
+                    Message message = json["data"].ToObject<Message>();
+                    MessageStore.Add(msgSeq, message);
+                    message.content = message.nonATMsg;
+                    if(message.attachments != null)
+                    {
+                        foreach (var item in message.attachments)
+                        {
+                            if (item.content_type.StartsWith("image"))
+                            {
+                                if (Directory.Exists("data/image") is false)
+                                    Directory.CreateDirectory("data/image");
+                                string filename = item.filename[..32];
+                                StringBuilder sb = new();
+                                sb.AppendLine("[image]");
+                                sb.AppendLine($"md5={filename}");
+                                sb.AppendLine($"size={item.size}");
+                                sb.AppendLine($"url={item.url}");
+                                File.WriteAllText($"{filename.ToUpper()}.cqimg", sb.ToString());
+                                message.content += $"[CQ:image,file:{item.filename}]";
+                            }
+                        }
+                    }                    
+                    message.content = Regex.Replace(message.content, "<@!(\\d*)>", $"[CQ:at,qq=$1]");
+                    message.content = Regex.Replace(message.content, "<emoji:(\\d*)>", "[CQ:face,id=$1]");
+                    Helper.OutLog($"处理消息: {message.content}");
+
+                    var b = Encoding.UTF8.GetBytes(message.content);
+                    string messageParse = GB18030.GetString(Encoding.Convert(Encoding.UTF8, GB18030, b));
+                    byte[] messageBytes = GB18030.GetBytes(messageParse + "\0");
+                    var messageIntptr = Marshal.AllocHGlobal(messageBytes.Length);
+                    Marshal.Copy(messageBytes, 0, messageIntptr, messageBytes.Length);
+
+                    int result = PluginManagment.Instance.CallFunction(FunctionName.GroupMsg, 2, msgSeq, message.channel_id, Convert.ToInt64(message.author.id),
+                      "", messageIntptr, 0);
+                    Thread.Sleep(1000);
+                    Emit(PluginMessageType.FinMessage, result);
                     break;
                 default:
                     break;

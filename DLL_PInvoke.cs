@@ -134,11 +134,13 @@ namespace Channel_Native
             switch (ApiName)
             {
                 case FunctionName.PrivateMsg:
+                    Console.WriteLine("Call private");
                     if (PrivateMsg == null)
                     { returnValue = -1; break; }
                     returnValue = PrivateMsg(Convert.ToInt32(args[0]), Convert.ToInt32(args[1]), Convert.ToInt64(args[2]), (IntPtr)args[3], 1);
                     break;
                 case FunctionName.GroupMsg:
+                    Console.WriteLine("Call group");
                     if (GroupMsg == null)
                     { returnValue = -1; break; }
                     returnValue = GroupMsg(Convert.ToInt32(args[0]), Convert.ToInt32(args[1]), Convert.ToInt64(args[2]), Convert.ToInt64(args[3])
@@ -156,21 +158,25 @@ namespace Channel_Native
                     Helper.OutError("未实现事件");
                     break;
                 case FunctionName.StartUp:
+                    Console.WriteLine("call startup");
                     if (Startup == null)
                     { returnValue = -1; break; }
                     returnValue = Startup();
                     break;
                 case FunctionName.Exit:
+                    Console.WriteLine("call exit");
                     if (Exit == null)
                     { returnValue = -1; break; }
                     returnValue = Exit();
                     break;
                 case FunctionName.Enable:
+                    Console.WriteLine("call enable");
                     if (Enable == null)
                     { returnValue = -1; break; }
                     returnValue = Enable();
                     break;
                 case FunctionName.Disable:
+                    Console.WriteLine("call disable");
                     if (Disable == null)
                     { returnValue = -1; break; }
                     returnValue = Disable();

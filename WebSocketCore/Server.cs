@@ -34,9 +34,13 @@ namespace Channel_Native.WebSocketCore
         }
         private static Dictionary<int, MessageStateMachine> OrderedMessage = new();
         private static int msgSeq = 0;
-        public static void Broadcast(PluginMessageType type, Message msg)
+
+        private static Dictionary<int, Message> MessageStore = new();
+        private static Dictionary<long, User> UserStore = new();
+        public void Broadcast(PluginMessageType type, Message msg)
         {
             msgSeq++;
+            MessageStore.Add(msgSeq, msg);
             MessageStateMachine stateMachine = new(type, msg, Clients);
             Helper.OutLog("加入队列");
             OrderedMessage.Add(msgSeq, stateMachine);
@@ -72,6 +76,7 @@ namespace Channel_Native.WebSocketCore
                 {
                     Helper.OutLog("溢出");
                     RemoveStateMachine(index);
+                    Send_CallResult(CallResult.Pass);
                 }
             }
             public void HandleResult(CallResult result)
@@ -83,6 +88,7 @@ namespace Channel_Native.WebSocketCore
                         if (index == clients.Count)
                         {
                             RemoveStateMachine(index);
+                            Send_CallResult(CallResult.Pass);
                         }
                         else
                         {
@@ -92,6 +98,7 @@ namespace Channel_Native.WebSocketCore
                     case CallResult.Block:
                         Helper.OutLog($"阻止消息投递，序号: {index}");
                         RemoveStateMachine(index);
+                        Send_CallResult(CallResult.Block);
                         return;
                     default:
                         break;
@@ -165,7 +172,7 @@ namespace Channel_Native.WebSocketCore
                         Helper.OutError($"{PluginInfo.Name} 发生错误: {json["data"]["msg"]}");
                         break;
                     case PluginMessageType.FinMessage:
-                        OrderedMessage[msgSeq].HandleResult((CallResult)((int)json["data"]["result"]));
+                        OrderedMessage[msgSeq].HandleResult((CallResult)(int)json["data"]["msg"]);
                         break;
                     case PluginMessageType.Enable:
                         if(((int)json["data"]["msg"]) == 1)
@@ -184,7 +191,27 @@ namespace Channel_Native.WebSocketCore
                     case PluginMessageType.SendMsg:
                         var sendMsg = json["data"]["msg"];
                         var lastMsg = OrderedMessage.Last().Value.msg;
-                        Channel.Send_PlainMessage(lastMsg.channel_id, lastMsg.id, sendMsg["text"].ToString(), sendMsg["image"].ToString());
+                        Send_PlainMessage(lastMsg.channel_id, lastMsg.id, sendMsg["text"].ToString(), sendMsg["image"].ToString());
+                        break;
+                    case PluginMessageType.Log:
+                        var log = json["data"]["msg"];
+                        switch ((Enums.LogLevel)(int)log["level"])
+                        {
+                            case Enums.LogLevel.Debug:
+                            case Enums.LogLevel.Info:
+                            case Enums.LogLevel.InfoSuccess:
+                            case Enums.LogLevel.InfoReceive:
+                            case Enums.LogLevel.InfoSend:
+                                Helper.OutLog(log["content"].ToString(), log["type"].ToString());
+                                break;
+                            case Enums.LogLevel.Warning:
+                            case Enums.LogLevel.Error:
+                            case Enums.LogLevel.Fatal:
+                                Helper.OutError(log["content"].ToString(), log["type"].ToString());
+                                break;
+                            default:
+                                break;
+                        }
                         break;
                     default:
                         break;

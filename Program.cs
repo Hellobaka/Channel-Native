@@ -5,15 +5,18 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 
 namespace Channel_Native
 {
     internal class Program
     {
+
         static void Main(string[] args)
         {
             // Console.ReadLine();
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             _ = new PluginManagment();
 
             HandleStartArgs(args);
@@ -24,7 +27,15 @@ namespace Channel_Native
 
             while (true)
             {
-                Console.ReadLine();
+                string order = Console.ReadLine();
+                switch (order)
+                {
+                    case "load":
+                        LoadPlugin();
+                        break;
+                    default:
+                        break;
+                }
             }
         }
         private static void HandleStartArgs(string[] args)
@@ -76,11 +87,15 @@ namespace Channel_Native
             Helper.OutLog($"插件管理端");
             //创建插件管理服务器
             Helper.OutLog($"创建插件WebSocket服务器...");
-            ushort port = 6254;
-            var server = new Server(port);
-            string serverURL = $"ws://127.0.0.1:{port}/channel-native";
-            Helper.OutLog(serverURL);
+            MainSave.ServerPort = 6234;
+            var server = new Server(MainSave.ServerPort);
             //启动子进程
+            LoadPlugin();
+            Helper.OutLog("等待插件端连接...");
+        }
+
+        private static void LoadPlugin()
+        {
             Helper.OutLog($"遍历插件目录...");
             string path = Path.Combine(Environment.CurrentDirectory, "data", "plugins");
             if (!Directory.Exists(path))
@@ -94,11 +109,10 @@ namespace Channel_Native
                     UseShellExecute = true,
                     CreateNoWindow = false,
                     WindowStyle = ProcessWindowStyle.Normal,
-                    Arguments = $"-role { (int)Role.Plugin } -ws { serverURL } -pid { selfPID } -name { item.Name }"
+                    Arguments = $"-role { (int)Role.Plugin } -ws ws://127.0.0.1:{MainSave.ServerPort}/channel-native -pid { selfPID } -name { item.Name }"
                 };
                 Process.Start(ps);
             }
-            Helper.OutLog("等待插件端连接...");
         }
 
         private static void PluginInit()
@@ -138,11 +152,8 @@ namespace Channel_Native
 
         private static void Channel_OnATMessage(Channel_SDK.Model.Message msg)
         {
-            if (msg.nonATMsg == "r")
-            {
-                msg.Answer($"r: {new Random().Next(0, 6)}");
-            }
-            Channel.Send_CallResult(Channel.CallResult.Pass);
+            Helper.OutLog("收到AT消息，开始分发");
+            Server.Instance.Broadcast(PluginMessageType.ReceiveMessage, msg);
         }
     }
 }
