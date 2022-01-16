@@ -84,14 +84,10 @@ namespace Channel_Native.WebSocketCore
             switch ((PluginMessageType)(int)json["type"])
             {
                 case PluginMessageType.PluginInfo:
-                    if(MainSave.Role == Role.Plugin)
+                    MainSave.PluginID = (int)json["data"]["id"];
+                    if (MainSave.Role == Role.FakeCQP)
                     {
-                        MainSave.PluginID = (int)json["data"]["id"];
-                        Emit(PluginMessageType.PluginInfo, PluginManagment.Instance?.InstancePlugin.appinfo);
-                    }
-                    else
-                    {
-                        Emit(PluginMessageType.PluginInfo, new AppInfo() { Id ="FakeCQP" });
+                        Emit(PluginMessageType.PluginInfo, new AppInfo() { Id = "FakeCQP" });
                     }
                     break;
                 case PluginMessageType.Diconnect:

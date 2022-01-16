@@ -133,7 +133,7 @@ namespace Channel_Native.WebSocketCore
                 }
                 else {
                     CQPDll.Remove(this);
-                    Helper.OutLog($"CQP断开连接, 数量: {CQPDll.Count}");
+                    //Helper.OutLog($"CQP断开连接, 数量: {CQPDll.Count}");
                 }
             }
             protected override void OnError(ErrorEventArgs e)
@@ -157,7 +157,7 @@ namespace Channel_Native.WebSocketCore
                         {
                             IsPlugin = false;
                             CQPDll.Add(this);
-                            Helper.OutLog($"CQP已连接, 数量: {CQPDll.Count}");
+                            //Helper.OutLog($"CQP已连接, 数量: {CQPDll.Count}");
                         }
                         else
                         {
@@ -165,7 +165,7 @@ namespace Channel_Native.WebSocketCore
                             Emit(PluginMessageType.Enable, "");
                             Clients.Add(this);
                             Helper.OutLog($"插件已连接, 数量: {Clients.Count}");
-                            Helper.OutLog($"获取插件信息: id: {clientID} {PluginInfo.Id}[{PluginInfo.Name}] {PluginInfo.Version} - {PluginInfo.Author}");
+                            //Helper.OutLog($"获取插件信息: id: {clientID} {PluginInfo.Id}[{PluginInfo.Name}] {PluginInfo.Version} - {PluginInfo.Author}");
                         }
                         break;
                     case PluginMessageType.Error:
