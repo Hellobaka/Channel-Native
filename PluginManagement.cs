@@ -32,7 +32,7 @@ namespace Channel_Native
             FileInfo plugininfo = new (filepath);
             if (!File.Exists(plugininfo.FullName.Replace(".dll", ".json")))
             {
-                Helper.OutError($"插件 {plugininfo.Name} 加载失败,原因:缺少json文件");
+                Helper.OutError($"插件 {plugininfo.Name} 加载失败,原因:缺少json文件", "插件读取", true);
                 return false;
             }
 
@@ -51,7 +51,7 @@ namespace Channel_Native
 
             if (iLib.IsInvalid)
             {
-                Helper.OutError($"插件 {plugininfo.Name} 加载失败,返回句柄为空,GetLastError={GetLastError()}");
+                Helper.OutError($"插件 {plugininfo.Name} 加载失败,返回句柄为空,GetLastError={GetLastError()}", "插件读取", true);
                 return false;
             }
             dll.Init(iLib, json);
@@ -96,7 +96,7 @@ namespace Channel_Native
             }
             catch (Exception e)
             {
-                Helper.OutError("插件卸载" + e.Message + e.StackTrace);
+                Helper.OutError("插件卸载" + e.Message + e.StackTrace, "插件卸载", true);
             }
         }
         //写在构造函数是不是还好点?
@@ -148,7 +148,7 @@ namespace Channel_Native
             }
             catch (Exception e)
             {
-                Helper.OutError($"函数执行异常 插件 {InstancePlugin.appinfo.Name} {ApiName} 函数发生错误，错误信息:{e.Message} {e.StackTrace}");
+                Helper.OutError($"函数执行异常 插件 {InstancePlugin.appinfo.Name} {ApiName} 函数发生错误，错误信息:{e.Message} {e.StackTrace}", "插件事件", true);
                 new Thread(() =>
                 {
                     //TODO: 报错通知

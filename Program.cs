@@ -15,15 +15,21 @@ namespace Channel_Native
 
         static void Main(string[] args)
         {
-            // Console.ReadLine();
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            _ = new PluginManagment();
+            try
+            {
+                Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+                _ = new PluginManagment();
 
-            HandleStartArgs(args);
-            if (MainSave.Role == Role.Plugin)
-                PluginInit();
-            else
-                ServerInit();
+                HandleStartArgs(args);
+                if (MainSave.Role == Role.Plugin)
+                    PluginInit();
+                else
+                    ServerInit();
+            }
+            catch (Exception ex)
+            {
+
+            }
 
             while (true)
             {
@@ -96,8 +102,9 @@ namespace Channel_Native
 
         private static void LoadPlugin()
         {
-            Helper.OutLog($"遍历插件目录...");
-            string path = Path.Combine(Environment.CurrentDirectory, "data", "plugins");
+            string path = Path.Combine(Helper.BasePath, "data", "plugins");
+            Helper.OutLog($"遍历插件目录 {path}...");
+
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
             DirectoryInfo directoryInfo = new(path);
@@ -106,8 +113,8 @@ namespace Channel_Native
             {
                 ProcessStartInfo ps = new(Process.GetCurrentProcess().MainModule.FileName)
                 {
-                    UseShellExecute = true,
-                    CreateNoWindow = false,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
                     WindowStyle = ProcessWindowStyle.Normal,
                     Arguments = $"-role { (int)Role.Plugin } -ws ws://127.0.0.1:{MainSave.ServerPort}/channel-native -pid { selfPID } -name { item.Name }"
                 };
@@ -118,22 +125,28 @@ namespace Channel_Native
         private static void PluginInit()
         {
             Helper.OutLog($"插件端 主进程PID: {MainSave.ServerPID} 启动插件: {MainSave.PluginName} ws网址: {MainSave.ServerURL}");
-            //读取插件信息
-            var flag = PluginManagment.Instance.Load(Path.Combine(Environment.CurrentDirectory, "data", "plugins", MainSave.PluginName));
-            if (flag)
-            {
-                var appinfo = PluginManagment.Instance.InstancePlugin.appinfo;
-                Helper.OutLog($"插件读取成功: {appinfo.Id}[{appinfo.Name}] {appinfo.Version} - {appinfo.Author}");
-            }
-            else
-            {
-                Helper.OutError("插件读取失败, 子程序已退出...");
-                Environment.Exit(1);
-            }
             //连接插件管理端
             Helper.OutLog($"尝试连接插件服务端...");
             Client wsClient = new(MainSave.ServerURL);
             wsClient.Connect();
+            while(!Client.Connected)
+            {
+                Thread.Sleep(100);
+            }
+            //读取插件信息
+            var flag = PluginManagment.Instance.Load(Path.Combine(Helper.BasePath, "data", "plugins", MainSave.PluginName));
+            if (flag)
+            {
+                var appinfo = PluginManagment.Instance.InstancePlugin.appinfo;
+                wsClient.Emit(PluginMessageType.PluginInfo, PluginManagment.Instance?.InstancePlugin.appinfo);
+                Helper.OutLog($"插件读取成功: {appinfo.Id}[{appinfo.Name}] {appinfo.Version} - {appinfo.Author}", "插件读取", true);
+            }
+            else
+            {
+                Helper.OutError("插件读取失败, 子程序已退出...", "插件读取", true);
+                Environment.Exit(1);
+            }
+
             //启动主进程监测线程
             Helper.OutLog($"启动服务端存活监测线程...");
             new Thread(() =>

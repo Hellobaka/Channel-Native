@@ -1,7 +1,11 @@
-﻿using Channel_SDK;
+﻿using Channel_Native.Enums;
+using Channel_Native.WebSocketCore;
+using Channel_SDK;
 using Newtonsoft.Json;
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -13,16 +17,26 @@ namespace Channel_Native
         [DllImport("kernel32.dll", EntryPoint = "lstrlenA", CharSet = CharSet.Ansi)]
         private extern static int LstrlenA(IntPtr ptr);
 
-        public static void OutError(string content, string type = "")
+        public static void OutError(string content, string type = "", bool onServer = false)
         {
             Console.WriteLine($"[-][{DateTime.Now.ToLongTimeString()}] {(string.IsNullOrWhiteSpace(type) ? "" : $"[{type}]")}{content}");
+            if (onServer)
+            {
+                Client.Instance.Emit(Enums.PluginMessageType.Log, new { level=(int)LogLevel.Error, content, type });
+            }
+
             //Channel.Log
         }
-        public static void OutLog(string content, string type = "")
+        public static void OutLog(string content, string type = "", bool onServer = false)
         {
             Console.WriteLine($"[+][{DateTime.Now.ToLongTimeString()}] {(string.IsNullOrWhiteSpace(type) ? "" : $"[{type}]")}{content}");
+            if (onServer)
+            {
+                Client.Instance.Emit(Enums.PluginMessageType.Log, new { level = (int)LogLevel.Info, content, type });
+            }
             //Channel.Log
         }
+        public static string BasePath => new FileInfo(Process.GetCurrentProcess().MainModule.FileName).DirectoryName;
         public static long TimeStamp => (long)(DateTime.Now - new DateTime(1970, 1, 1, 0, 0, 0)).TotalMilliseconds;
         public static string ToJson(this object json) => JsonConvert.SerializeObject(json, Formatting.None);
 
